@@ -14,18 +14,23 @@ def setup_logging():
     """
     # --- Получаем уровень логирования из конфига ---
     log_level_str = settings.LOG_LEVEL.upper()
-
-    log_level = logging.getLevelName(log_level_str)
+    
+    # Словарь для преобразования строки в константу logging
+    log_levels = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
+    }
+    
     # Получаем соответствующий уровень. Если в конфиге указано что-то не то,
     # по умолчанию ставим INFO.
-    if not isinstance(log_level, int):
-        print(f"Предупреждение: неверный уровень логирования '{log_level_str}'. Используется INFO по умолчанию.")
-        log_level = logging.INFO
-
-
+    log_level = log_levels.get(log_level_str, logging.INFO)
+    print("===============", log_level)
     # Получаем корневой логгер
     logger = logging.getLogger()
-    logger.setLevel(log_level) 
+    logger.setLevel(log_level)  # 👈 Устанавливаем уровень из конфига!
 
     if logger.hasHandlers():
         logger.handlers.clear()
@@ -47,7 +52,7 @@ def setup_logging():
 
     # --- 3. Обработчик для вывода в консоль ---
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(log_level) #  Консоль будет показывать логи с тем же уровнем, что и в конфиге
+    console_handler.setLevel(log_level) # 👈 Консоль будет показывать логи с тем же уровнем, что и в конфиге
     console_handler.setFormatter(log_format)
     
     logger.addHandler(info_handler)
