@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from app.core.logging_config import setup_logging
 from app.core.config import settings
@@ -10,6 +10,8 @@ from app.core.exceptions import InvalidFileTypeError
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import os
+import time
+import random
 
 # 2. ВЫЗЫВАЕМ ФУНКЦИЮ НАСТРОЙКИ ЛОГИРОВАНИЯ
 # Это нужно сделать в самом начале, до создания экземпляра FastAPI
@@ -40,6 +42,51 @@ app.add_middleware(
     allow_methods=["*"], # Разрешить все методы (GET, POST, etc.)
     allow_headers=["*"], # Разрешить все заголовки
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    # Ждем, пока эндпоинт обработает запрос
+    response: Response = await call_next(request)
+    
+    # Добавляем заголовки. Они помогают защититься от некоторых атак.
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Content-Security-Policy'] = "default-src 'self'"
+    
+    return response
+
+# Запоминаем время старта приложения
+APP_START_TIME = time.time()
+
+@app.get("/metrics", summary="Эндпоинт для метрик Prometheus")
+def get_metrics():
+    """
+    Возвращает метрики в формате, понятном для Prometheus.
+    В реальном приложении здесь бы использовалась библиотека вроде prometheus-fastapi-instrumentator.
+    """
+    # Подсчитываем, сколько секунд работает приложение
+    uptime_seconds = time.time() - APP_START_TIME
+    
+    # Генерируем случайные значения для демонстрации
+    active_streams = random.randint(1, 10)
+    events_detected_total = random.randint(100, 500)
+    
+    metrics_text = f"""
+        # HELP firewatch_uptime_seconds Время работы приложения в секундах.
+        # TYPE firewatch_uptime_seconds gauge
+        firewatch_uptime_seconds {uptime_seconds}
+
+        # HELP firewatch_active_streams_total Количество активных видеопотоков.
+        # TYPE firewatch_active_streams_total gauge
+        firewatch_active_streams_total {active_streams}
+
+        # HELP firewatch_events_detected_total Общее количество обнаруженных событий (огонь/дым).
+        # TYPE firewatch_events_detected_total counter
+        firewatch_events_detected_total {events_detected_total}
+    """
+    return Response(content=metrics_text, media_type="text/plain")
 
 
 @app.exception_handler(InvalidFileTypeError)

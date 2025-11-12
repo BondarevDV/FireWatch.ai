@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: firewatch_api
+    ports:
+      - "8000:8000"
+    volumes:
+      # Для разработки: монтируем код внутрь контейнера,
+      # чтобы --reload работал при изменениях
+      - .:/app
+    env_file:
+      # Передаем переменные окружения из .env файла
+      - .env
+    # Переопределяем команду для запуска в режиме разработки с автоперезагрузкой
+    command: uvicorn main:app --reload --host 0.0.0.0 --port 8000
